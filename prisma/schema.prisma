@@ -1,0 +1,416 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model funcoes {
+  id         Int            @id @default(autoincrement()) @db.UnsignedInt
+  nome       String         @db.VarChar(255)
+  descricao  String?        @db.Text
+  emp        String         @db.VarChar(20)
+  ativo      funcoes_ativo? @default(Sim)
+  created_at DateTime?      @default(now()) @db.DateTime(0)
+  updated_at DateTime?      @default(now()) @db.DateTime(0)
+  deleted_at DateTime?      @db.DateTime(0)
+
+  @@index([deleted_at], map: "idx_funcoes_deleted_at")
+  @@index([emp], map: "idx_funcoes_emp")
+  @@index([nome], map: "idx_funcoes_nome")
+}
+
+model escalas {
+  id         Int            @id @default(autoincrement()) @db.UnsignedInt
+  nome       String         @db.VarChar(255)
+  descricao  String?        @db.Text
+  segunda_id Int?           @db.UnsignedInt
+  terca_id   Int?           @db.UnsignedInt
+  quarta_id  Int?           @db.UnsignedInt
+  quinta_id  Int?           @db.UnsignedInt
+  sexta_id   Int?           @db.UnsignedInt
+  sabado_id  Int?           @db.UnsignedInt
+  domingo_id Int?           @db.UnsignedInt
+  feriado_id Int?           @db.UnsignedInt
+  emp        String         @db.VarChar(20)
+  ativo      escalas_ativo? @default(Sim)
+  created_at DateTime?      @default(now()) @db.DateTime(0)
+  updated_at DateTime?      @default(now()) @db.DateTime(0)
+  deleted_at DateTime?      @db.DateTime(0)
+
+  @@index([deleted_at], map: "idx_escalas_deleted_at")
+  @@index([emp], map: "idx_escalas_emp")
+  @@index([nome], map: "idx_escalas_nome")
+}
+
+model funcionario_locacoes {
+  id             Int      @id @default(autoincrement()) @db.UnsignedInt
+  emp            String   @db.VarChar(20)
+  funcionario_id Int      @db.UnsignedInt
+  locacao_id     Int      @db.UnsignedInt
+  created_at     DateTime @default(now()) @db.DateTime(0)
+
+  @@unique([funcionario_id, locacao_id], map: "uniq_func_loc")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model funcionarios {
+  id             Int       @id @default(autoincrement()) @db.UnsignedInt
+  nome           String    @db.VarChar(255)
+  pis            String?   @db.VarChar(20)
+  cpf            String?   @db.VarChar(14)
+  matricula      String?   @db.VarChar(50)
+  empresa        String?   @db.VarChar(255)
+  emp            String?   @db.VarChar(20)
+  locacao_id     Int?      @db.UnsignedInt
+  setor_id       Int?      @db.UnsignedInt
+  funcao_id      Int?      @db.UnsignedInt
+  escala_id      Int?      @db.UnsignedInt
+  login          String?   @unique(map: "login") @db.VarChar(100)
+  senha          String?   @db.VarChar(255)
+  foto           String?   @db.VarChar(255)
+  ativo          String?   @default("Sim") @db.VarChar(3)
+  data_admissao  DateTime? @db.Date
+  data_inicio    DateTime? @db.Date
+  horario        String?   @db.VarChar(100)
+  mobile         String?   @default("N") @db.Char(1)
+  web            String?   @default("S") @db.Char(1)
+  usarpin        String?   @default("N") @db.Char(1)
+  pin            String?   @db.VarChar(10)
+  geolocalizacao String?   @default("S") @db.Char(1)
+  intervalo      String?   @default("N") @db.Char(1)
+  bloqueio_raio  String?   @default("N") @db.Char(1)
+  created_at     DateTime? @default(now()) @db.DateTime(0)
+  updated_at     DateTime? @default(now()) @db.DateTime(0)
+  deleted_at     DateTime? @db.DateTime(0)
+
+  @@index([cpf], map: "idx_funcionarios_cpf")
+  @@index([deleted_at], map: "idx_funcionarios_deleted_at")
+  @@index([login], map: "idx_funcionarios_login")
+  @@index([matricula], map: "idx_funcionarios_matricula")
+  @@index([nome], map: "idx_funcionarios_nome")
+  @@index([ativo], map: "idx_funcionarios_status")
+}
+
+model horarios {
+  id         Int       @id @default(autoincrement()) @db.UnsignedInt
+  nome       String    @db.VarChar(255)
+  ent1       String    @db.Char(5)
+  sai1       String    @db.Char(5)
+  ent2       String?   @db.Char(5)
+  sai2       String?   @db.Char(5)
+  intervalo  String?   @db.Char(5)
+  jornada    String?   @db.Char(5)
+  emp        String    @db.VarChar(20)
+  ativo      String?   @default("Sim") @db.Char(3)
+  created_at DateTime? @default(now()) @db.DateTime(0)
+  updated_at DateTime? @default(now()) @db.DateTime(0)
+  deleted_at DateTime? @db.DateTime(0)
+
+  @@index([deleted_at], map: "idx_horarios_deleted_at")
+  @@index([emp], map: "idx_horarios_emp")
+  @@index([nome], map: "idx_horarios_nome")
+}
+
+model locacoes {
+  id         Int             @id @default(autoincrement()) @db.UnsignedInt
+  emp        String          @db.VarChar(20)
+  nome       String          @db.VarChar(255)
+  descricao  String?         @db.Text
+  endereco   String?         @db.VarChar(255)
+  rua        String?         @db.VarChar(150)
+  bairro     String?         @db.VarChar(150)
+  cidade     String?         @db.VarChar(150)
+  estado     String?         @db.VarChar(20)
+  cep        String?         @db.VarChar(20)
+  latitude   Decimal?        @db.Decimal(10, 6)
+  longitude  Decimal?        @db.Decimal(10, 6)
+  ativo      locacoes_ativo? @default(Sim)
+  created_at DateTime?       @default(now()) @db.DateTime(0)
+  updated_at DateTime?       @default(now()) @db.DateTime(0)
+  deleted_at DateTime?       @db.DateTime(0)
+
+  @@index([deleted_at], map: "idx_locacoes_deleted_at")
+  @@index([emp], map: "idx_locacoes_emp")
+  @@index([nome], map: "idx_locacoes_nome")
+}
+
+model parametros {
+  id         Int       @id @default(autoincrement()) @db.UnsignedInt
+  emp        String    @db.VarChar(20)
+  empresa    String    @db.VarChar(255)
+  raio       Int
+  tempo      Int
+  created_at DateTime? @default(now()) @db.DateTime(0)
+  updated_at DateTime? @default(now()) @db.DateTime(0)
+  deleted_at DateTime? @db.DateTime(0)
+
+  @@index([deleted_at], map: "idx_parametros_deleted_at")
+  @@index([emp], map: "idx_parametros_emp")
+}
+
+model ponto_batidas {
+  id             Int       @id @default(autoincrement()) @db.UnsignedInt
+  emp            String    @db.VarChar(20)
+  funcionario_id Int       @db.UnsignedInt
+  dat            DateTime  @db.Date
+  hora           String?   @db.Char(5)
+  locacao_id     Int?      @db.UnsignedInt
+  origem         String    @default("web") @db.VarChar(10)
+  lat            Decimal?  @db.Decimal(10, 6)
+  lng            Decimal?  @db.Decimal(10, 6)
+  endereco       String?   @db.VarChar(255)
+  distancia_m    Int?
+  status         String?   @db.VarChar(20)
+  created_at     DateTime  @default(now()) @db.DateTime(0)
+  deleted_at     DateTime? @db.DateTime(0)
+  justificativa  String    @db.VarChar(100)
+  processo       DateTime  @default(now()) @db.DateTime(0)
+  ori            String    @db.Char(5)
+
+  @@index([funcionario_id, dat], map: "idx_func_data")
+}
+
+model ponto_eventos {
+  id             Int                  @id @default(autoincrement()) @db.UnsignedInt
+  emp            String               @db.VarChar(20)
+  funcionario_id Int                  @db.UnsignedInt
+  tipo           ponto_eventos_tipo
+  data_inicio    DateTime             @db.Date
+  data_fim       DateTime?            @db.Date
+  campo          ponto_eventos_campo?
+  valor_hora     String?              @db.Char(5)
+  motivo         String               @db.VarChar(150)
+  observacao     String?              @db.Text
+  anexo          String?              @db.VarChar(255)
+  aprovado       String               @default("N") @db.Char(1)
+  aprovado_por   Int?
+  aprovado_em    DateTime?            @db.DateTime(0)
+  created_at     DateTime             @default(now()) @db.DateTime(0)
+  deleted_at     DateTime?            @db.DateTime(0)
+
+  @@index([funcionario_id, tipo, data_inicio, data_fim], map: "idx_func_tipo_data")
+}
+
+model setores {
+  id         Int            @id @default(autoincrement()) @db.UnsignedInt
+  emp        String?        @db.VarChar(20)
+  nome       String         @db.VarChar(255)
+  descricao  String?        @db.Text
+  ativo      setores_ativo? @default(Sim)
+  created_at DateTime?      @default(now()) @db.DateTime(0)
+  updated_at DateTime?      @default(now()) @db.DateTime(0)
+  deleted_at DateTime?      @db.DateTime(0)
+
+  @@index([deleted_at], map: "idx_setores_deleted_at")
+  @@index([emp], map: "idx_setores_emp")
+  @@index([nome], map: "idx_setores_nome")
+}
+
+model system_group {
+  id                   Int                    @id
+  name                 String?                @db.VarChar(256)
+  system_group_program system_group_program[]
+  system_user_group    system_user_group[]
+
+  @@index([name], map: "sys_group_name_idx")
+}
+
+model system_group_program {
+  id                Int             @id
+  system_group_id   Int?
+  system_program_id Int?
+  system_group      system_group?   @relation(fields: [system_group_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "system_group_program_ibfk_1")
+  system_program    system_program? @relation(fields: [system_program_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "system_group_program_ibfk_2")
+
+  @@index([system_group_id], map: "sys_group_program_group_idx")
+  @@index([system_program_id], map: "sys_group_program_program_idx")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model system_preference {
+  id    String? @db.VarChar(256)
+  value String? @db.Text
+
+  @@index([id], map: "sys_preference_id_idx")
+  @@ignore
+}
+
+model system_program {
+  id                         Int                          @id
+  name                       String?                      @db.VarChar(256)
+  controller                 String?                      @db.VarChar(256)
+  system_group_program       system_group_program[]
+  system_program_method_role system_program_method_role[]
+  system_user_program        system_user_program[]
+  system_users               system_users[]
+
+  @@index([controller], map: "sys_program_controller_idx")
+  @@index([name], map: "sys_program_name_idx")
+}
+
+model system_program_method_role {
+  id                Int             @id
+  system_program_id Int?
+  system_role_id    Int?
+  method_name       String?         @db.VarChar(256)
+  system_program    system_program? @relation(fields: [system_program_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "system_program_method_role_ibfk_1")
+  system_role       system_role?    @relation(fields: [system_role_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "system_program_method_role_ibfk_2")
+
+  @@index([system_program_id], map: "sys_program_method_role_program_idx")
+  @@index([system_role_id], map: "sys_program_method_role_role_idx")
+}
+
+model system_role {
+  id                         Int                          @id
+  name                       String?                      @db.VarChar(256)
+  custom_code                String?                      @db.VarChar(256)
+  system_program_method_role system_program_method_role[]
+  system_user_role           system_user_role[]
+
+  @@index([name], map: "sys_role_name_idx")
+}
+
+model system_unit {
+  id               Int                @id
+  name             String?            @db.VarChar(256)
+  connection_name  String?            @db.VarChar(256)
+  custom_code      String?            @db.VarChar(256)
+  system_user_unit system_user_unit[]
+
+  @@index([name], map: "sys_unit_name_idx")
+}
+
+model system_user_group {
+  id              Int           @id
+  system_user_id  Int?
+  system_group_id Int?
+  system_users    system_users? @relation(fields: [system_user_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "system_user_group_ibfk_1")
+  system_group    system_group? @relation(fields: [system_group_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "system_user_group_ibfk_2")
+
+  @@index([system_group_id], map: "sys_user_group_group_idx")
+  @@index([system_user_id], map: "sys_user_group_user_idx")
+}
+
+model system_user_old_password {
+  id             Int           @id
+  system_user_id Int?
+  password       String?       @db.VarChar(256)
+  created_at     String?       @db.VarChar(20)
+  system_users   system_users? @relation(fields: [system_user_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "system_user_old_password_ibfk_1")
+
+  @@index([system_user_id], map: "sys_user_old_password_user_idx")
+}
+
+model system_user_program {
+  id                Int             @id
+  system_user_id    Int?
+  system_program_id Int?
+  system_users      system_users?   @relation(fields: [system_user_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "system_user_program_ibfk_1")
+  system_program    system_program? @relation(fields: [system_program_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "system_user_program_ibfk_2")
+
+  @@index([system_program_id], map: "sys_user_program_program_idx")
+  @@index([system_user_id], map: "sys_user_program_user_idx")
+}
+
+model system_user_role {
+  id             Int           @id
+  system_user_id Int?
+  system_role_id Int?
+  system_users   system_users? @relation(fields: [system_user_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "system_user_role_ibfk_1")
+  system_role    system_role?  @relation(fields: [system_role_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "system_user_role_ibfk_2")
+
+  @@index([system_role_id], map: "sys_user_role_role_idx")
+  @@index([system_user_id], map: "sys_user_role_user_idx")
+}
+
+model system_user_unit {
+  id             Int           @id
+  system_user_id Int?
+  system_unit_id Int?
+  system_users   system_users? @relation(fields: [system_user_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "system_user_unit_ibfk_1")
+  system_unit    system_unit?  @relation(fields: [system_unit_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "system_user_unit_ibfk_2")
+
+  @@index([system_unit_id], map: "sys_user_unit_unit_idx")
+  @@index([system_user_id], map: "sys_user_unit_user_idx")
+}
+
+model system_users {
+  id                        Int                        @id
+  name                      String?                    @db.VarChar(256)
+  login                     String?                    @db.VarChar(256)
+  password                  String?                    @db.VarChar(256)
+  email                     String?                    @db.VarChar(256)
+  accepted_term_policy      String?                    @db.Char(1)
+  phone                     String?                    @db.VarChar(256)
+  address                   String?                    @db.VarChar(256)
+  function_name             String?                    @db.VarChar(256)
+  about                     String?                    @db.Text
+  accepted_term_policy_at   String?                    @db.VarChar(20)
+  accepted_term_policy_data String?                    @db.Text
+  frontpage_id              Int?
+  system_unit_id            Int?
+  active                    String?                    @db.Char(1)
+  custom_code               String?                    @db.VarChar(256)
+  otp_secret                String?                    @db.VarChar(256)
+  system_user_group         system_user_group[]
+  system_user_old_password  system_user_old_password[]
+  system_user_program       system_user_program[]
+  system_user_role          system_user_role[]
+  system_user_unit          system_user_unit[]
+  system_program            system_program?            @relation(fields: [frontpage_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "system_users_ibfk_1")
+
+  @@index([frontpage_id], map: "sys_user_program_idx")
+  @@index([name], map: "sys_users_name_idx")
+}
+
+model movimento {
+  id             Int       @id @default(autoincrement()) @db.UnsignedInt
+  emp            String    @db.VarChar(20)
+  funcionario_id Int       @db.UnsignedInt
+  data           DateTime  @db.Date
+  ent1           String?   @db.Char(5)
+  sai1           String?   @db.Char(5)
+  ent2           String?   @db.Char(5)
+  sai2           String?   @db.Char(5)
+  status         String?   @db.VarChar(20)
+  created_at     DateTime  @default(now()) @db.DateTime(0)
+  deleted_at     DateTime? @db.DateTime(0)
+
+  @@index([funcionario_id, data], map: "idx_func_data")
+}
+
+enum ponto_eventos_tipo {
+  JUSTIFICATIVA
+  AFST
+  AJUSTE
+}
+
+enum funcoes_ativo {
+  Sim
+  N_o @map("Não")
+}
+
+enum setores_ativo {
+  Sim
+  N_o @map("Não")
+}
+
+enum ponto_eventos_campo {
+  ent1
+  sai1
+  ent2
+  sai2
+}
+
+enum escalas_ativo {
+  Sim
+  N_o @map("Não")
+}
+
+enum locacoes_ativo {
+  Sim
+  N_o @map("Não")
+}
