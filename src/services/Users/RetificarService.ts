@@ -143,10 +143,41 @@ export class RetificarService {
 
             console.log('Evento criado com sucesso:', pontoEvento);
 
-            // 6. Se foi relacionado a um ponto específico, podemos adicionar lógica adicional aqui
+            // 6. Se foi relacionado a um ponto específico, atualizar a tabela pontos_batidas
             if (data && tipo) {
                 console.log('Evento relacionado a ponto específico:', { data, tipo });
-                // TODO: Implementar lógica adicional se necessário
+                
+                try {
+                    // Buscar o ponto específico na tabela pontos_batidas
+                    const pontoEspecifico = await prismaClient.ponto_batidas.findFirst({
+                        where: {
+                            funcionario_id: requisicao.user_id,
+                            dat: new Date(data),
+                            deleted_at: null
+                        }
+                    });
+
+                    if (pontoEspecifico) {
+                        // Atualizar o campo justificativa com o tipo do evento
+                        const tipoJustificativa = `${tipoEvento}: ${requisicao.titulo}`;
+                        
+                        await prismaClient.ponto_batidas.update({
+                            where: {
+                                id: pontoEspecifico.id
+                            },
+                            data: {
+                                justificativa: tipoJustificativa
+                            }
+                        });
+
+                        console.log(`Ponto atualizado com justificativa: ${tipoJustificativa}`);
+                    } else {
+                        console.log('Ponto específico não encontrado para atualização');
+                    }
+                } catch (updateError) {
+                    console.error('Erro ao atualizar ponto específico:', updateError);
+                    // Não falhar a operação principal se a atualização do ponto falhar
+                }
             }
 
             return {
