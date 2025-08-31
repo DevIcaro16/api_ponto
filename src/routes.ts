@@ -18,6 +18,7 @@ const ftpRoutes = require('./routes/ftpRoutes');
 
 export const router = Router();
 
+
 router.get("/", (req: Request, res: Response) => {
     res.status(200).json({
         success: true,
