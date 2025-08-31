@@ -13,6 +13,9 @@ import { RetificarController } from "./controllers/Users/RetificarController";
 import { RegistrarPontoController } from "./controllers/Users/RegistrarPontoController";
 import { BuscarFuncionarioCompletoController } from "./controllers/Users/BuscarFuncionarioCompletoController";
 
+// Importar rotas FTP
+const ftpRoutes = require('./routes/ftpRoutes');
+
 export const router = Router();
 
 router.get("/", (req: Request, res: Response) => {
@@ -76,3 +79,6 @@ router.post("/funcionariocompleto", async (req: Request, res: Response) => {
     const controller = new BuscarFuncionarioCompletoController();
     await controller.handle(req, res);
 });
+
+// Usar as rotas FTP
+router.use(ftpRoutes);
