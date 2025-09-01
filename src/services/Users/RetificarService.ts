@@ -100,18 +100,13 @@ export class RetificarService {
 
             console.log('Tipo de evento determinado:', tipoEvento);
 
-            // 3. Processar anexo (se houver)
+                        // 3. Processar anexo (se houver)
             let anexoUrl: string | null = null;
             if (requisicao.anexo) {
                 try {
-                    // TODO: Implementar upload de anexo quando o provedor estiver pronto
-                    if (this.imageStorage) {
-                        anexoUrl = await this.imageStorage.uploadImage(requisicao.anexo);
-                    } else {
-                        // Por enquanto, simular que o anexo foi processado
-                        anexoUrl = `temp_anexo_${Date.now()}.jpg`; // Placeholder
-                    }
-                    console.log('Anexo processado (placeholder):', anexoUrl);
+                    // O anexo já foi processado no frontend e enviado como caminho FTP
+                    anexoUrl = requisicao.anexo;
+                    console.log('Anexo recebido do frontend:', anexoUrl);
                 } catch (anexoError) {
                     console.warn('Erro ao processar anexo:', anexoError);
                     // Continuar mesmo sem anexo
@@ -149,19 +144,46 @@ export class RetificarService {
                 
                 try {
                     // Buscar o ponto específico na tabela pontos_batidas
-                    const pontoEspecifico = await prismaClient.ponto_batidas.findFirst({
+                    console.log('Buscando ponto com:', { 
+                        funcionario_id: requisicao.user_id, 
+                        data: data,
+                        tipo: tipo 
+                    });
+                    
+                    // Buscar o ponto específico na tabela pontos_batidas
+                    // Primeiro, tentar encontrar pelo tipo específico
+                    let pontoEspecifico = await prismaClient.ponto_batidas.findFirst({
                         where: {
                             funcionario_id: requisicao.user_id,
                             dat: new Date(data),
                             deleted_at: null
                         }
                     });
+                    
+                    // Se não encontrou, buscar qualquer ponto da data
+                    if (!pontoEspecifico) {
+                        console.log('Ponto não encontrado pelo tipo, buscando qualquer ponto da data...');
+                        pontoEspecifico = await prismaClient.ponto_batidas.findFirst({
+                            where: {
+                                funcionario_id: requisicao.user_id,
+                                dat: new Date(data),
+                                deleted_at: null
+                            }
+                        });
+                    }
+                    
+                    console.log('Ponto encontrado:', pontoEspecifico);
 
                     if (pontoEspecifico) {
                         // Atualizar o campo justificativa com o tipo do evento
                         const tipoJustificativa = `${tipoEvento}: ${requisicao.titulo}`;
                         
-                        await prismaClient.ponto_batidas.update({
+                        console.log('Atualizando ponto com justificativa:', {
+                            pontoId: pontoEspecifico.id,
+                            justificativa: tipoJustificativa
+                        });
+                        
+                        const pontoAtualizado = await prismaClient.ponto_batidas.update({
                             where: {
                                 id: pontoEspecifico.id
                             },
@@ -170,7 +192,7 @@ export class RetificarService {
                             }
                         });
 
-                        console.log(`Ponto atualizado com justificativa: ${tipoJustificativa}`);
+                        console.log(`Ponto atualizado com sucesso:`, pontoAtualizado);
                     } else {
                         console.log('Ponto específico não encontrado para atualização');
                     }
