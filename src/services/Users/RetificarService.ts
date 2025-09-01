@@ -138,8 +138,8 @@ export class RetificarService {
 
             console.log('Evento criado com sucesso:', pontoEvento);
 
-            // 6. Se foi relacionado a um ponto específico, atualizar a tabela pontos_batidas
-            if (data && tipo) {
+            // 6. Tentar atualizar a tabela pontos_batidas se houver data
+            if (data) {
                 console.log('Evento relacionado a ponto específico:', { data, tipo });
                 
                 try {
@@ -151,7 +151,6 @@ export class RetificarService {
                     });
                     
                     // Buscar o ponto específico na tabela pontos_batidas
-                    // Primeiro, tentar encontrar pelo tipo específico
                     let pontoEspecifico = await prismaClient.ponto_batidas.findFirst({
                         where: {
                             funcionario_id: requisicao.user_id,
@@ -160,9 +159,11 @@ export class RetificarService {
                         }
                     });
                     
+                    console.log('Ponto encontrado:', pontoEspecifico);
+                    
                     // Se não encontrou, buscar qualquer ponto da data
                     if (!pontoEspecifico) {
-                        console.log('Ponto não encontrado pelo tipo, buscando qualquer ponto da data...');
+                        console.log('Ponto não encontrado, buscando qualquer ponto da data...');
                         pontoEspecifico = await prismaClient.ponto_batidas.findFirst({
                             where: {
                                 funcionario_id: requisicao.user_id,
@@ -170,6 +171,7 @@ export class RetificarService {
                                 deleted_at: null
                             }
                         });
+                        console.log('Ponto encontrado na segunda busca:', pontoEspecifico);
                     }
                     
                     console.log('Ponto encontrado:', pontoEspecifico);
