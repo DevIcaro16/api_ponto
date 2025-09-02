@@ -6,6 +6,7 @@ interface RetificarProps {
     tipo: number | null;
     latitude: string | null;
     longitude: string | null;
+    pontoId: number | null;
     requisicao: {
         user_id: number;
         titulo: string;
@@ -53,10 +54,18 @@ export class RetificarService {
         // this.imageStorage = new CloudinaryProvider();
     }
 
-    async execute({ requisicao, data, tipo, latitude, longitude }: RetificarProps): Promise<RetificarResponse> {
+    // Função para gerar ID único
+    private generateUniqueId(): string {
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substring(2, 15);
+        const userId = Math.floor(Math.random() * 10000);
+        return `${timestamp}_${random}_${userId}`;
+    }
+
+    async execute({ requisicao, data, tipo, latitude, longitude, pontoId }: RetificarProps): Promise<RetificarResponse> {
         try {
             console.log('=== INICIANDO RETIFICAR SERVICE ===');
-            console.log('Dados recebidos:', { requisicao, data, tipo, latitude, longitude });
+            console.log('Dados recebidos:', { requisicao, data, tipo, latitude, longitude, pontoId });
 
             // 1. Buscar informações do funcionário para obter emp
             const funcionario = await prismaClient.funcionarios.findUnique({
@@ -82,10 +91,27 @@ export class RetificarService {
             console.log('Funcionário encontrado:', funcionario);
 
             // 2. Determinar o tipo de evento baseado na subcategoria
+            console.log('=== DETERMINAÇÃO DO TIPO ===');
+            console.log('requisicao.subcategoria:', requisicao.subcategoria);
+            console.log('requisicao.subcategoria type:', typeof requisicao.subcategoria);
+            console.log('requisicao.subcategoria.toLowerCase():', requisicao.subcategoria?.toLowerCase());
+            
             let tipoEvento: ponto_eventos_tipo;
             switch (requisicao.subcategoria.toLowerCase()) {
                 case 'justificativa':
                     tipoEvento = 'JUSTIFICATIVA';
+                    break;
+                case 'atestado':
+                    tipoEvento = 'ATESTADO';
+                    break;
+                case 'sistema':
+                    tipoEvento = 'SISTEMA';
+                    break;
+                case 'app':
+                    tipoEvento = 'APP';
+                    break;
+                case 'outro':
+                    tipoEvento = 'OUTRO';
                     break;
                 case 'afst':
                     tipoEvento = 'AFST';
@@ -99,6 +125,14 @@ export class RetificarService {
             }
 
             console.log('Tipo de evento determinado:', tipoEvento);
+            console.log('Tipo de evento (string):', JSON.stringify(tipoEvento));
+
+            // Validar se o tipo é válido
+            const tiposValidos = ['JUSTIFICATIVA', 'ATESTADO', 'SISTEMA', 'APP', 'OUTRO', 'AFST', 'AJUSTE'];
+            if (!tiposValidos.includes(tipoEvento)) {
+                console.error('Tipo de evento inválido:', tipoEvento);
+                tipoEvento = 'JUSTIFICATIVA'; // Fallback para valor válido
+            }
 
                         // 3. Processar anexo (se houver)
             let anexoUrl: string | null = null;
@@ -119,79 +153,76 @@ export class RetificarService {
 
             console.log('Datas definidas:', { dataInicio, dataFim });
 
-            // 5. Criar evento na tabela ponto_eventos
-            const pontoEvento = await prismaClient.ponto_eventos.create({
-                data: {
-                    emp: funcionario.emp,
-                    funcionario_id: requisicao.user_id,
-                    tipo: tipoEvento,
-                    data_inicio: dataInicio,
-                    data_fim: dataFim,
-                    motivo: requisicao.titulo,
-                    observacao: requisicao.descricao,
-                    anexo: anexoUrl,
-                    aprovado: 'N', // Padrão: não aprovado
-                    aprovado_por: null,
-                    aprovado_em: null
-                }
-            });
+            // 5. Determinar se é retificação ou justificativa
+            const isRetificacao = tipoEvento === 'AJUSTE' || tipoEvento === 'SISTEMA' || tipoEvento === 'APP';
+            
+            let pontoEvento = null;
+            
+            if (!isRetificacao) {
+                // Para justificativas, criar evento na tabela ponto_eventos
+                pontoEvento = await prismaClient.ponto_eventos.create({
+                    data: {
+                        emp: funcionario.emp,
+                        funcionario_id: requisicao.user_id,
+                        tipo: tipoEvento as any, // Cast temporário até regenerar o Prisma Client
+                        data_inicio: dataInicio,
+                        data_fim: dataFim,
+                        motivo: requisicao.titulo,
+                        observacao: requisicao.descricao,
+                        anexo: anexoUrl,
+                        aprovado: 'N', // Padrão: não aprovado
+                        aprovado_por: null,
+                        aprovado_em: null
+                    }
+                });
+                console.log('Evento de justificativa criado com sucesso:', pontoEvento);
+            } else {
+                console.log('É uma retificação - anexo será salvo em ponto_batidas');
+            }
 
-            console.log('Evento criado com sucesso:', pontoEvento);
-
-            // 6. Tentar atualizar a tabela pontos_batidas se houver data
-            if (data) {
-                console.log('Evento relacionado a ponto específico:', { data, tipo });
+            // 6. Tentar atualizar a tabela pontos_batidas se houver pontoId
+            console.log('Verificando se deve atualizar ponto_batidas:', { data, tipo, pontoId });
+            if (pontoId) {
+                console.log('Evento relacionado a ponto específico:', { data, tipo, pontoId });
                 
                 try {
-                    // Buscar o ponto específico na tabela pontos_batidas
-                    console.log('Buscando ponto com:', { 
-                        funcionario_id: requisicao.user_id, 
-                        data: data,
-                        tipo: tipo 
-                    });
+                    // Buscar o ponto específico na tabela pontos_batidas pelo ID
+                    console.log('Buscando ponto com ID:', pontoId);
                     
-                    // Buscar o ponto específico na tabela pontos_batidas
-                    let pontoEspecifico = await prismaClient.ponto_batidas.findFirst({
+                    let pontoEspecifico = await prismaClient.ponto_batidas.findUnique({
                         where: {
-                            funcionario_id: requisicao.user_id,
-                            dat: new Date(data),
-                            deleted_at: null
+                            id: pontoId
                         }
                     });
                     
                     console.log('Ponto encontrado:', pontoEspecifico);
                     
-                    // Se não encontrou, buscar qualquer ponto da data
-                    if (!pontoEspecifico) {
-                        console.log('Ponto não encontrado, buscando qualquer ponto da data...');
-                        pontoEspecifico = await prismaClient.ponto_batidas.findFirst({
-                            where: {
-                                funcionario_id: requisicao.user_id,
-                                dat: new Date(data),
-                                deleted_at: null
-                            }
-                        });
-                        console.log('Ponto encontrado na segunda busca:', pontoEspecifico);
-                    }
-                    
-                    console.log('Ponto encontrado:', pontoEspecifico);
-
                     if (pontoEspecifico) {
                         // Atualizar o campo justificativa com o tipo do evento
                         const tipoJustificativa = `${tipoEvento}: ${requisicao.titulo}`;
                         
-                        console.log('Atualizando ponto com justificativa:', {
-                            pontoId: pontoEspecifico.id,
+                        // Preparar dados para atualização
+                        const updateData: any = {
                             justificativa: tipoJustificativa
+                        };
+                        
+                        // Se for retificação, incluir o anexo no ponto_batidas
+                        if (isRetificacao && anexoUrl) {
+                            updateData.anexo = anexoUrl;
+                            console.log('Incluindo anexo no ponto_batidas para retificação:', anexoUrl);
+                        }
+                        
+                        console.log('Atualizando ponto com dados:', {
+                            pontoId: pontoEspecifico.id,
+                            updateData: updateData,
+                            isRetificacao: isRetificacao
                         });
                         
                         const pontoAtualizado = await prismaClient.ponto_batidas.update({
                             where: {
                                 id: pontoEspecifico.id
                             },
-                            data: {
-                                justificativa: tipoJustificativa
-                            }
+                            data: updateData
                         });
 
                         console.log(`Ponto atualizado com sucesso:`, pontoAtualizado);
@@ -204,17 +235,25 @@ export class RetificarService {
                 }
             }
 
+            // Preparar resposta baseada no tipo de operação
+            const responseData = isRetificacao ? {
+                id: pontoId,
+                tipo: tipoEvento,
+                message: "Retificação aplicada com sucesso!",
+                status: 'Aplicado'
+            } : {
+                id: pontoEvento?.id,
+                tipo: pontoEvento?.tipo,
+                data_inicio: pontoEvento?.data_inicio,
+                data_fim: pontoEvento?.data_fim,
+                status: pontoEvento?.aprovado === 'S' ? 'Aprovado' : 'Pendente'
+            };
+
             return {
                 success: true,
-                message: "Solicitação enviada com sucesso! Aguarde aprovação.",
+                message: isRetificacao ? "Retificação aplicada com sucesso!" : "Solicitação enviada com sucesso! Aguarde aprovação.",
                 statusCode: 201,
-                data: {
-                    id: pontoEvento.id,
-                    tipo: pontoEvento.tipo,
-                    data_inicio: pontoEvento.data_inicio,
-                    data_fim: pontoEvento.data_fim,
-                    status: pontoEvento.aprovado === 'S' ? 'Aprovado' : 'Pendente'
-                }
+                data: responseData
             };
 
         } catch (error) {
@@ -258,7 +297,7 @@ export class RetificarService {
             }
             
             // Por enquanto, retornar placeholder
-            return `anexo_${Date.now()}.jpg`;
+            return `anexo_${this.generateUniqueId()}.jpg`;
         } catch (error) {
             console.warn('Erro ao processar anexo:', error);
             return null;

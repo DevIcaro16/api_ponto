@@ -12,8 +12,13 @@ export class RetificarController {
                 tipo,
                 latitude,
                 longitude,
+                pontoId,
                 requisicao
             } = req.body;
+
+            console.log('=== VALIDAÇÃO DOS DADOS ===');
+            console.log('requisicao.subcategoria:', requisicao?.subcategoria);
+            console.log('requisicao.subcategoria type:', typeof requisicao?.subcategoria);
 
             // Validação dos dados obrigatórios
             if (!requisicao || !requisicao.user_id || !requisicao.titulo || !requisicao.descricao || !requisicao.subcategoria) {
@@ -39,7 +44,8 @@ export class RetificarController {
                 data: data ? new Date(data) : null,
                 tipo: tipo ? parseInt(tipo) : null,
                 latitude: latitude || null,
-                longitude: longitude || null
+                longitude: longitude || null,
+                pontoId: pontoId ? parseInt(pontoId) : null
             });
 
             return res.status(response.statusCode).json(response);

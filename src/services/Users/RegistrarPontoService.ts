@@ -47,14 +47,15 @@ export class RegistrarPontoService {
                 lng: pontoData.lng
             });
 
+            // Criar a data correta para verificação (apenas data, sem hora)
+            const dataAtual = new Date();
+            const dataCorreta = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), dataAtual.getDate());
+            
             // Verificar se já existe um ponto similar (mesmo funcionário, mesmo dia, mesma localização)
             const pontoExistente = await prismaClient.ponto_batidas.findFirst({
                 where: {
                     funcionario_id: pontoData.funcionario_id,
-                    dat: {
-                        gte: new Date(new Date(pontoData.dat).setHours(0, 0, 0, 0)),
-                        lt: new Date(new Date(pontoData.dat).setHours(23, 59, 59, 999))
-                    },
+                    dat: dataCorreta, // Usar data exata
                     // Verifica se já existe um ponto no mesmo horário (com margem de 5 minutos)
                     hora: pontoData.hora
                 }
@@ -68,21 +69,25 @@ export class RegistrarPontoService {
                 };
             }
 
-            // Função para ajustar timezone do Brasil (UTC-3)
-            const ajustarTimezoneBrasil = (data: Date): Date => {
-                const dataUTC = new Date(data);
-                // Subtrair 3 horas para ajustar para o horário do Brasil
-                dataUTC.setHours(dataUTC.getHours() - 3);
-                return dataUTC;
-            };
-
-            const dataProcessamento = ajustarTimezoneBrasil(new Date());
+            // Ajustar timestamp para horário do Brasil (-3 horas)
+            const agora = new Date();
+            const dataProcessamento = new Date(agora.getTime() - (3 * 60 * 60 * 1000));
             
-            console.log("📅 Timestamps para salvar:", {
+            console.log("⏰ DEBUG - Timestamp processo:", {
+                agora_servidor: agora.toISOString(),
+                agora_servidor_local: agora.toLocaleString('pt-BR'),
+                processo_brasil: dataProcessamento.toISOString(),
+                processo_brasil_local: dataProcessamento.toLocaleString('pt-BR'),
+                diferenca_horas: "-3 horas",
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            });
+            
+            console.log("📅 DEBUG - Datas para salvar:", {
                 dat_original: pontoData.dat,
                 dat_parsed: new Date(pontoData.dat),
-                processo_ajustado: dataProcessamento,
-                processo_original: new Date()
+                data_correta: dataCorreta,
+                data_correta_iso: dataCorreta.toISOString(),
+                processo: dataProcessamento
             });
 
             // Criar o ponto na base de dados
@@ -90,7 +95,7 @@ export class RegistrarPontoService {
                 data: {
                     funcionario_id: pontoData.funcionario_id,
                     emp: pontoData.emp,
-                    dat: new Date(pontoData.dat),
+                    dat: dataCorreta, // Usar data local correta
                     hora: pontoData.hora || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                     locacao_id: pontoData.locacao_id || null,
                     origem: pontoData.origem || "mobile",
@@ -100,8 +105,8 @@ export class RegistrarPontoService {
                     distancia_m: pontoData.distancia_m || null,
                     status: pontoData.status || "registrado",
                     justificativa: pontoData.justificativa || "",
-                    processo: dataProcessamento, // Forçar timestamp correto do Brasil
-                    ori: pontoData.ori || "00:00"
+                    processo: dataProcessamento, // Timestamp atual do servidor
+                    ori: pontoData.hora || "00:00"
                 }
             });
 

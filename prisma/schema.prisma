@@ -169,6 +169,8 @@ model ponto_batidas {
   justificativa  String    @db.VarChar(100)
   processo       DateTime  @default(now()) @db.DateTime(0)
   ori            String    @db.Char(5)
+  tip            String    @db.VarChar(4)
+  anexo          String?   @db.VarChar(200)
 
   @@index([funcionario_id, dat], map: "idx_func_data")
 }
@@ -384,6 +386,10 @@ model movimento {
 
 enum ponto_eventos_tipo {
   JUSTIFICATIVA
+  ATESTADO
+  SISTEMA
+  APP
+  OUTRO
   AFST
   AJUSTE
 }
