@@ -1,10 +1,15 @@
 import { funcionarios } from "@prisma/client";
 import prismaClient from "../../prisma/prisma";
 import * as bcrypt from 'bcrypt';
+import { getActiveLoginMethod, isTraditionalLogin, isCpfLogin } from "../../config/loginConfig";
 
 interface LoginServiceProps {
-    empresa: string;
-    login: string;
+    // Campos para login tradicional
+    empresa?: string;
+    login?: string;
+    // Campos para login por CPF
+    cpf?: string;
+    // Campo comum
     senha: string;
 }
 
@@ -17,19 +22,29 @@ interface UserResponse {
 
 export class LoginService {
 
-    async execute({ empresa, login, senha }: LoginServiceProps): Promise<UserResponse> {
+    async execute({ empresa, login, cpf, senha }: LoginServiceProps): Promise<UserResponse> {
 
         let isSuccess: boolean = true;
         let message: string = '';
         let statusCode: number = 200;
+        const loginMethod = getActiveLoginMethod();
 
-        console.log(login)
-        console.log(senha);
+        console.log('🔐 Método de login ativo:', loginMethod);
+        console.log('📝 Dados recebidos:', { empresa, login, cpf, senha: '***' });
 
-        if (!empresa || !login || !senha) {
-            isSuccess = false;
-            message = "Todos os campos são obrigatórios!";
-            statusCode = 400; // Bad Request
+        // Validação baseada no método de login ativo
+        if (isTraditionalLogin()) {
+            if (!empresa || !login || !senha) {
+                isSuccess = false;
+                message = 'Empresa, login e senha são obrigatórios';
+                statusCode = 400;
+            }
+        } else if (isCpfLogin()) {
+            if (!cpf || !senha) {
+                isSuccess = false;
+                message = 'CPF e senha são obrigatórios';
+                statusCode = 400;
+            }
         }
 
         if (!isSuccess) {
@@ -40,13 +55,29 @@ export class LoginService {
             };
         }
 
-        // Primeiro, buscar o usuário apenas por empresa e login
-        const user = await prismaClient.funcionarios.findFirst({
-            where: {
-                empresa: empresa,
-                login: login
-            }
-        });
+        // Buscar o usuário baseado no método de login ativo
+        let user: funcionarios | null = null;
+        
+        if (isTraditionalLogin()) {
+            console.log('🔍 Buscando usuário por empresa e login...');
+            user = await prismaClient.funcionarios.findFirst({
+                where: {
+                    empresa: empresa,
+                    login: login
+                }
+            });
+        } else if (isCpfLogin()) {
+            console.log('🔍 Buscando usuário por CPF...');
+            // Limpar CPF (remover pontos, traços, espaços)
+            const cpfLimpo = cpf?.replace(/[^\d]/g, '') || '';
+            console.log('🔍 CPF limpo:', cpfLimpo);
+            
+            user = await prismaClient.funcionarios.findFirst({
+                where: {
+                    cpf: cpfLimpo
+                }
+            });
+        }
 
         if (!user) {
             console.log("Usuário Não Encontrado!");

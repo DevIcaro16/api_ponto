@@ -206,10 +206,43 @@ export class RetificarService {
                             justificativa: tipoJustificativa
                         };
                         
-                        // Se for retificação, incluir o anexo no ponto_batidas
-                        if (isRetificacao && anexoUrl) {
-                            updateData.anexo = anexoUrl;
-                            console.log('Incluindo anexo no ponto_batidas para retificação:', anexoUrl);
+                        // Se for retificação, incluir o anexo e tip no ponto_batidas
+                        if (isRetificacao) {
+                            console.log('🔍 isRetificacao é true, processando anexo e tip...');
+                            console.log('🔍 anexoUrl:', anexoUrl);
+                            
+                            if (anexoUrl) {
+                                updateData.anexo = anexoUrl;
+                                console.log('Incluindo anexo no ponto_batidas para retificação:', anexoUrl);
+                            } else {
+                                console.log('⚠️ anexoUrl é null ou undefined');
+                            }
+                            
+                            // Determinar o tip baseado na posição do ponto no dia
+                            const pontosDoDia = await prismaClient.ponto_batidas.findMany({
+                                where: {
+                                    funcionario_id: pontoEspecifico.funcionario_id,
+                                    dat: pontoEspecifico.dat
+                                },
+                                orderBy: {
+                                    hora: 'asc'
+                                }
+                            });
+                            
+                            console.log('🔍 Pontos do dia encontrados:', pontosDoDia.length);
+                            
+                            const posicaoNoDia = pontosDoDia.findIndex(p => p.id === pontoEspecifico.id);
+                            let tip = "ent1";
+                            if (posicaoNoDia === 1) tip = "sai1";
+                            else if (posicaoNoDia === 2) tip = "ent2";
+                            else if (posicaoNoDia === 3) tip = "sai2";
+                            else if (posicaoNoDia > 3) tip = "ext";
+                            
+                            updateData.tip = tip;
+                            console.log(`Definindo tip para retificação: ${tip} (posição ${posicaoNoDia} no dia)`);
+                            console.log('🔍 updateData completo:', updateData);
+                        } else {
+                            console.log('🔍 isRetificacao é false, não processando anexo e tip');
                         }
                         
                         console.log('Atualizando ponto com dados:', {

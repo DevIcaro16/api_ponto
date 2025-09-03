@@ -71,23 +71,36 @@ export class ReceberPontosService {
             }
 
             // Preparando para inserção no BD - apenas campos da tabela ponto_batidas
-            const pontosFormatados = novosPontos.map((ponto) => ({
-                funcionario_id: ponto.userId || ponto.funcionario_id,
-                emp: ponto.empresa || ponto.emp,
-                dat: formatarDataAppParaServ(ponto.data || ponto.dat),
-                hora: ponto.hora || "00:00",
-                locacao_id: ponto.cliente_id || ponto.locacao_id || null,
-                origem: ponto.origem || "mobile",
-                lat: ponto.latitude || ponto.lat ? parseFloat(ponto.latitude || ponto.lat) : null,
-                lng: ponto.longitude || ponto.lng ? parseFloat(ponto.longitude || ponto.lng) : null,
-                endereco: ponto.endereco || null,
-                distancia_m: ponto.distancia || ponto.distancia_m ? parseInt(ponto.distancia || ponto.distancia_m) : null,
-                status: ponto.status || "novo",
-                justificativa: ponto.justificativa,
-                ori: ponto.ori || "00:00"
-            }));
+            const pontosFormatados = novosPontos.map((ponto, index) => {
+                // Determinar o tipo de batida baseado na ordem
+                let tip = "ent1"; // Primeiro ponto do dia
+                if (index === 1) tip = "sai1"; // Segundo ponto do dia
+                else if (index === 2) tip = "ent2"; // Terceiro ponto do dia
+                else if (index === 3) tip = "sai2"; // Quarto ponto do dia
+                else if (index > 3) tip = "ext"; // Pontos extras
+
+                console.log(`🔍 Ponto ${index + 1}: tip=${tip}`);
+
+                return {
+                    funcionario_id: ponto.userId || ponto.funcionario_id,
+                    emp: ponto.empresa || ponto.emp,
+                    dat: formatarDataAppParaServ(ponto.data || ponto.dat),
+                    hora: ponto.hora || "00:00",
+                    locacao_id: ponto.cliente_id || ponto.locacao_id || null,
+                    origem: ponto.origem || "mobile",
+                    lat: ponto.latitude || ponto.lat ? parseFloat(ponto.latitude || ponto.lat) : null,
+                    lng: ponto.longitude || ponto.lng ? parseFloat(ponto.longitude || ponto.lng) : null,
+                    endereco: ponto.endereco || null,
+                    distancia_m: ponto.distancia || ponto.distancia_m ? parseInt(ponto.distancia || ponto.distancia_m) : null,
+                    status: ponto.status || "novo",
+                    justificativa: ponto.justificativa,
+                    ori: ponto.ori || "00:00",
+                    tip: tip
+                };
+            });
 
             console.log(`📝 Inserindo ${pontosFormatados.length} novos pontos no banco...`);
+            console.log('🔍 Primeiro ponto formatado:', pontosFormatados[0]);
             const pontosInseridos = await prismaClient.ponto_batidas.createMany({ data: pontosFormatados });
 
             if (!pontosInseridos.count) {

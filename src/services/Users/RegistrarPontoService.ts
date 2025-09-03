@@ -48,8 +48,9 @@ export class RegistrarPontoService {
             });
 
             // Criar a data correta para verificação (apenas data, sem hora)
+            // Usar UTC para manter consistência com os dados existentes
             const dataAtual = new Date();
-            const dataCorreta = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), dataAtual.getDate());
+            const dataCorreta = new Date(Date.UTC(dataAtual.getFullYear(), dataAtual.getMonth(), dataAtual.getDate()));
             
             // Verificar se já existe um ponto similar (mesmo funcionário, mesmo dia, mesma localização)
             const pontoExistente = await prismaClient.ponto_batidas.findFirst({
@@ -68,6 +69,60 @@ export class RegistrarPontoService {
                     statusCode: 409, // Conflict
                 };
             }
+
+            // Contar quantos pontos o funcionário já tem no dia para determinar o tipo
+            console.log('🔍 Buscando pontos do dia com:', {
+                funcionario_id: pontoData.funcionario_id,
+                dat: dataCorreta,
+                dat_iso: dataCorreta.toISOString()
+            });
+            
+            const pontosDoDia = await prismaClient.ponto_batidas.count({
+                where: {
+                    funcionario_id: pontoData.funcionario_id,
+                    dat: dataCorreta
+                }
+            });
+            
+            // Buscar também os pontos existentes para debug
+            const pontosExistentes = await prismaClient.ponto_batidas.findMany({
+                where: {
+                    funcionario_id: pontoData.funcionario_id,
+                    dat: dataCorreta
+                },
+                select: {
+                    id: true,
+                    dat: true,
+                    hora: true,
+                    tip: true
+                }
+            });
+            
+            console.log('🔍 Pontos existentes encontrados:', pontosExistentes);
+
+            // Determinar o tipo de batida baseado na quantidade de pontos do dia
+            // Se já tem 0 pontos, este será o 1º (ent1)
+            // Se já tem 1 ponto, este será o 2º (sai1)
+            // Se já tem 2 pontos, este será o 3º (ent2)
+            // Se já tem 3 pontos, este será o 4º (sai2)
+            // Se já tem 4+ pontos, este será extra (ext)
+            let tip = "ent1"; // Primeiro ponto do dia
+            if (pontosDoDia === 1) tip = "sai1"; // Segundo ponto do dia
+            else if (pontosDoDia === 2) tip = "ent2"; // Terceiro ponto do dia
+            else if (pontosDoDia === 3) tip = "sai2"; // Quarto ponto do dia
+            else if (pontosDoDia >= 4) tip = "ext"; // Pontos extras
+            
+            console.log(`🔍 Lógica do tip: pontosDoDia=${pontosDoDia}, tip=${tip}`);
+
+            console.log(`📊 Funcionário ${pontoData.funcionario_id} tem ${pontosDoDia} pontos hoje. Próximo tipo: ${tip}`);
+            console.log('🔍 Dados que serão salvos:', {
+                funcionario_id: pontoData.funcionario_id,
+                emp: pontoData.emp,
+                dat: dataCorreta,
+                hora: pontoData.hora || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                tip: tip,
+                ori: pontoData.hora || "00:00"
+            });
 
             // Ajustar timestamp para horário do Brasil (-3 horas)
             const agora = new Date();
@@ -106,7 +161,8 @@ export class RegistrarPontoService {
                     status: pontoData.status || "registrado",
                     justificativa: pontoData.justificativa || "",
                     processo: dataProcessamento, // Timestamp atual do servidor
-                    ori: pontoData.hora || "00:00"
+                    ori: pontoData.hora || "00:00",
+                    tip: tip
                 }
             });
 
@@ -126,6 +182,8 @@ export class RegistrarPontoService {
                 message: "Erro interno do servidor ao registrar ponto.",
                 statusCode: 500,
             };
+            
+
         }
     }
 }
